@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <title>HappyBirthday JYT</title>
+    <style>
+        body{
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            background: linear-gradient(#918C9B, #FCDDCC);
+            text-align: center;
+        }
+        .happy{
+            position:absolute;
+            margin: auto;
+            top: 60%; left: 0; bottom: 0; right: 0;
+            vertical-align:middle;
+            width: 213px;
+            height: 82px;
+        }
+        .rabbit{
+            position:absolute;
+            margin: auto;
+            top: -80%; left: 0; bottom: 0; right: 0;
+            vertical-align:middle;
+            width: 213px;
+            height: 82px;
+        }
+    </style>
+    <script type="text/javascript" src="js/three.js" ></script>
+    <script type="text/javascript" src="js/OrbitControls.js" ></script>
+    <script type="text/javascript" src="js/MTLLoader.js"></script>
+    <script type="text/javascript" src="js/OBJLoader.js"></script>
+    <script type="text/javascript" src="js/SkyShader.js"></script>
+    <script type="text/javascript" src="js/STLLoader.js"></script>
+
+</head>
+<body>
+    <div id="world" style="text-align: center">
+        <img class="happy" src="img/1.png">
+        <img class="rabbit" src="img/rabbit.png">
+    </div>
+
+    <script>
+        var scene,camera,renderer,axes,ambientLight;
+
+        init();
+
+        function init() {
+
+            //scene
+            scene = new THREE.Scene();
+
+            //camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+            camera.position.z = 200;
+            camera.position.x = 0;
+            camera.position.y = 30;
+            camera.lookAt(scene.position);
+
+            axes = new THREE.AxisHelper(100);
+            //scene.add(axes);
+
+            // Add SkyBox
+            var path = "sky/";
+            var format = '.png';
+            var urls = [
+                path + 'xyz' + format, path + 'xyz' + format,
+                path + 'py' + format, path + 'ny' + format,
+                path + 'xyz' + format, path + 'xyz' + format
+            ];
+
+            var textureCube = THREE.ImageUtils.loadTextureCube( urls );
+
+            var shader = THREE.ShaderLib[ "cube" ];
+            shader.uniforms[ "tCube" ].value = textureCube;
+
+            var material = new THREE.ShaderMaterial( {
+                        fragmentShader: shader.fragmentShader,
+                        vertexShader: shader.vertexShader,
+                        uniforms: shader.uniforms,
+                        depthWrite: false,
+                        side: THREE.BackSide
+                    } ),
+
+            mesh = new THREE.Mesh( new THREE.BoxGeometry( 1000, 1000, 1000 ), material );
+            scene.add( mesh );
+
+            //partical
+            var particles, particle, material, particleCount, points,group2;
+
+            group2 = new THREE.Group();
+            scene.add(group2);
+
+            material = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 1.2,
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            particleCount = 15000;
+            particles = new THREE.Geometry();
+            for(var i= 0;i<particleCount;i++){
+                var px = Math.random() * 2000 - 500;
+                var py = Math.random() * 2000 - 500;
+                var pz = Math.random() * 2000 - 500;
+                particle = new THREE.Vector3(px, py, pz);
+                particle.velocity = new THREE.Vector3(0, Math.random(), 0);
+                particles.vertices.push(particle);
+            }
+
+            points = new THREE.Points(particles, material);
+            points.sortParticles = true;
+            group2.add(points);
+
+
+            //light
+            var hemisphereLight, shadowLight, shadowLight2;
+
+
+            ambientLight = new THREE.AmbientLight(0xffffff, .3);
+            scene.add(ambientLight);
+
+            hemisphereLight = new THREE.HemisphereLight(0xaaaaaa,0x000000, .9);
+            scene.add(hemisphereLight);
+
+            /*var pointLight = new THREE.PointLight(0xffffff,.8);
+            pointLight.position.set(100,100,100);
+            pointLight.castShadow = true;
+            scene.add(pointLight);
+
+            var pointLight2 = new THREE.PointLight(0xffffff,.2);
+            pointLight2.position.set(0,-100,0);
+            pointLight2.castShadow = true;
+            scene.add(pointLight2);*/
+
+            shadowLight = new THREE.DirectionalLight(0xFFFFE0, 0.6);
+            shadowLight.position.set(200, 200,200);
+            shadowLight.castShadow = true;
+            shadowLight.shadow.mapSize.width = 2048;
+            shadowLight.shadow.mapSize.height = 2048;
+
+            scene.add(shadowLight);
+
+            shadowLight2= new THREE.DirectionalLight(0xffffff, .1);
+            shadowLight2.position.set(-100, -100, 0);
+            //scene.add(shadowLight2);
+
+            //loader
+            var group = new THREE.Group();
+            group.position.set(0,-25,0);
+            scene.add(group);
+
+           var montainObj,doorObj,tree1Obj,tree2Obj;
+
+            /*montainObj = new THREE.MTLLoader();
+            montainObj.load('obj/montain.mtl', function (Materials) {
+                Materials.preload();
+                var ObjLoader = new THREE.OBJLoader();
+                ObjLoader.setMaterials(Materials);
+                ObjLoader.load('obj/montain.obj', function (montain) {
+                    montain.position.set(0, -20, 0);
+                    var scales = 0.2;
+                    montain.scale.set(scales, scales, scales);
+                    montain.castShadow = true;
+                    montain.receiveShadow = true;
+                    group.add(montain);
+                });
+            });*/
+
+            montainObj = new THREE.OBJLoader();
+            montainObj.load('obj/montain.obj', function(montain) {
+                montain.traverse(function(child) {
+                    if (child instanceof THREE.Mesh) {
+                        child.material = new THREE.MeshLambertMaterial({
+                            color: 0xC29B80,
+                            side: THREE.DoubleSide
+                        });
+                    }
+                });
+                montain.position.set(0, -20, 0);
+                var scales = 0.2;
+                montain.scale.set(scales, scales, scales);
+                montain.castShadow = true;
+                montain.receiveShadow = true;
+                group.add(montain);
+            });
+//校门
+            doorObj = new THREE.MTLLoader();
+            doorObj.load('obj/door.mtl', function (Materials) {
+                Materials.preload();
+                var ObjLoader = new THREE.OBJLoader();
+                ObjLoader.setMaterials(Materials);
+                ObjLoader.load('obj/door.obj', function (door) {
+                    door.position.set(35, 28,25);
+                    door.rotation.y = Math.PI/3;
+                    var scales = 0.1;
+                    door.scale.set(scales, scales, scales);
+                    door.castShadow = true;
+                    door.receiveShadow = true;
+                    group.add(door);
+                });
+            });
+
+            tree2Obj = new THREE.MTLLoader();
+            tree2Obj.load('obj/tree2.mtl', function (Materials) {
+                Materials.preload();
+                var ObjLoader = new THREE.OBJLoader();
+                ObjLoader.setMaterials(Materials);
+                ObjLoader.load('obj/tree2.obj', function (tree) {
+                    tree.position.set(15, 25,20);
+                    var scales = 0.3;
+                    tree.scale.set(scales, scales, scales);
+                    tree.castShadow = true;
+                    tree.receiveShadow = true;
+                    group.add(tree);
+                });
+            });
+//A旁
+            tree1Obj = new THREE.MTLLoader();
+            tree1Obj.load('obj/tree1.mtl', function (Materials) {
+                Materials.preload();
+                var ObjLoader = new THREE.OBJLoader();
+                ObjLoader.setMaterials(Materials);
+                ObjLoader.load('obj/tree1.obj', function (tree) {
+                    tree.position.set(18, 28, 50 );
+                    var scales = 0.15;
+                    tree.scale.set(scales, scales, scales);
+                    tree.castShadow = true;
+                    tree.receiveShadow = true;
+                    group.add(tree);
+                });
+            });
+
+//多啦A梦
+            var loader = new THREE.STLLoader();
+            loader.load( 'stl/dlam.stl', function ( geometry ) {
+                var material = new THREE.MeshPhongMaterial( { color: 0x8DEEEE, specular: 0x111111, shininess: 200 } );
+                var mesh = new THREE.Mesh( geometry, material );
+                mesh.position.set( 8, 29, 56 );
+                mesh.rotation.set( - Math.PI / 2 , 0,0 );
+                var scaleObj = 0.2;
+                mesh.scale.set( scaleObj, scaleObj, scaleObj );
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add( mesh );
+            } );
+//任意门
+            loader.load( 'stl/AnywhereDoor.stl', function ( geometry ) {
+                var material = new THREE.MeshPhongMaterial( { color: 0xFF7A8C, specular: 0x111111, shininess: 200 } );
+                var mesh = new THREE.Mesh( geometry, material );
+                mesh.position.set( 0, 27, 58 );
+                mesh.rotation.set( - Math.PI / 2 ,0, Math.PI/2 );
+                var scaleObj = 0.14;
+                mesh.scale.set( scaleObj, scaleObj, scaleObj );
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add( mesh );
+            } );
+//云
+            loader.load( 'stl/cloud.stl', function ( geometry ) {
+                var material = new THREE.MeshPhongMaterial( { color: 0xF8F8FF, specular: 0x111111, shininess: 200 } );
+                var mesh = new THREE.Mesh( geometry, material );
+                mesh.position.set( 20, 40, -35 );
+                mesh.rotation.set( - Math.PI / 2 ,0, Math.PI/2 );
+                var scaleObj = 0.14;
+                mesh.scale.set( scaleObj, scaleObj, scaleObj );
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add( mesh );
+            } )
+//兔子
+            loader.load( 'stl/B.stl', function ( geometry ) {
+                var material = new THREE.MeshPhongMaterial( { color: 0xF8F8FF, specular: 0x111111, shininess: 200 } );
+                var mesh = new THREE.Mesh( geometry, material );
+                mesh.position.set( -20, 27, -30 );
+                mesh.rotation.set( - Math.PI / 2 ,0, Math.PI/2 );
+                var scaleObj = 0.1;
+                mesh.scale.set( scaleObj, scaleObj, scaleObj );
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add( mesh );
+            } )
+//treehouse
+            doorObj.load('obj/treehouse1.mtl', function (Materials) {
+                Materials.preload();
+                var ObjLoader = new THREE.OBJLoader();
+                ObjLoader.setMaterials(Materials);
+                ObjLoader.load('obj/treehouse1.obj', function (door) {
+                    door.position.set(0, 28,0);
+                    door.rotation.y = Math.PI/3;
+                    var scales = 0.03;
+                    door.scale.set(scales, scales, scales);
+                    door.castShadow = true;
+                    door.receiveShadow = true;
+                    group.add(door);
+                });
+            });
+
+
+
+
+
+            //render
+            renderer = new THREE.WebGLRenderer({antialias: true,alpha: true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            //renderer.setClearColor(0xd8d0d1);
+            var container = document.getElementById('world');
+            container.appendChild(renderer.domElement);
+            renderer.render(scene, camera);
+
+
+
+            function render() {
+                renderer.render(scene, camera);
+            }
+
+            //control
+            var controls = new THREE.OrbitControls(camera);
+            controls.addEventListener('change', render);
+            controls.minDistance = 110;
+            controls.maxDistance = 300;
+            //controls.maxPolarAngle = Math.PI / 2;
+            //controls.enableZoom = false;
+            controls.enablePan = false;
+
+            //resize
+            window.addEventListener('resize', onWindowResize, false);
+            function onWindowResize() {
+
+                windowHalfX = window.innerWidth / 2;
+                windowHalfY = window.innerHeight / 2;
+
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+
+                renderer.setSize(window.innerWidth, window.innerHeight);
+
+            }
+
+            //animate
+            function animate(){
+
+                requestAnimationFrame(animate);
+                //var timer = Date.now() * 0.0005;
+                //camera.position.x = (Math.cos( timer ) * 75);
+                //camera.position.z = (Math.sin( timer ) * 75);
+                //group.rotation.x +=0.01;
+                group.rotation.y -=0.005;
+                shadowLight.rotation.y -=0.005;
+                group2.rotation.y += 0.002;
+                group2.rotation.z += 0.001;
+                camera.lookAt( scene.position );
+                render();
+            }
+            animate();
+        }
+
+
+
+
+    </script>
+</body>
+</html>
